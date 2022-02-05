@@ -214,6 +214,8 @@ mod tests {
         pt.append("\n56\r\n78");
         pt.insert(2, "1\r\n2");
 
+        assert_eq!(pt.to_string(), "0\n1\r\n2\n3\r\n4\n56\r\n78");
+
         let lines: Vec<String> = pt.lines().skip(4).collect();
 
         assert_eq!(lines, vec!["56", "78"]);

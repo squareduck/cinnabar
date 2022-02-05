@@ -12,7 +12,7 @@ use self::match_iter::MatchIter;
 use self::span::Span;
 
 /// Position in text in terms of span index and offset in that span.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SpanAddress {
     index: usize,
     offset: usize,
@@ -31,6 +31,7 @@ pub struct PieceTable {
     original: Content,
     added: Content,
     spans: Vec<Span>,
+    extend_spans: bool,
 }
 
 impl<'pt> PieceTable {
@@ -48,6 +49,7 @@ impl<'pt> PieceTable {
             original: original_buffer,
             added: added_buffer,
             spans,
+            extend_spans: false,
         }
     }
 
@@ -123,9 +125,44 @@ impl<'pt> PieceTable {
         }
     }
 
+    fn extend_span(
+        &mut self,
+        start_address: &SpanAddress,
+        end_address: &SpanAddress,
+        content: &str,
+    ) -> Option<Change> {
+        if self.extend_spans == true
+            && start_address.index > 0
+            && start_address.offset == 0
+            && start_address == end_address
+            && self.spans[start_address.index - 1].source == Source::Added
+        {
+            let previous_span = &self.spans[start_address.index - 1];
+            let mut new_span = self.added.append(content);
+            new_span.position = previous_span.position;
+            new_span.length += previous_span.length;
+
+            Some(Change {
+                index: start_address.index - 1,
+                new: vec![new_span],
+                old: vec![previous_span.clone()],
+            })
+        } else {
+            None
+        }
+    }
+
     fn change(&mut self, position: usize, length: usize, content: &str) -> Change {
         let start_address = self.span_address(position);
-        let end_address = self.span_address(position + length);
+        let end_address = if length == 0 {
+            start_address.clone()
+        } else {
+            self.span_address(position + length)
+        };
+
+        if let Some(change) = self.extend_span(&start_address, &end_address, content) {
+            return change;
+        }
 
         let new_span = if content.len() > 0 {
             Some(self.added.append(content))
@@ -364,11 +401,92 @@ mod tests {
         );
     }
 
+    #[test]
+    fn appends_with_extend_spans() {
+        let mut pt = PieceTable::from("012");
+        pt.extend_spans = true;
+
+        let change = pt.append("345");
+        assert_eq!(pt.to_string(), "012345");
+        assert_eq!(
+            change,
+            Change {
+                index: 1,
+                new: vec![Span {
+                    source: Source::Added,
+                    position: 0,
+                    length: 3,
+                    line_breaks: None
+                }],
+                old: vec![]
+            }
+        );
+
+        let change = pt.append("678");
+        assert_eq!(pt.to_string(), "012345678");
+        assert_eq!(
+            change,
+            Change {
+                index: 1,
+                new: vec![Span {
+                    source: Source::Added,
+                    position: 0,
+                    length: 6,
+                    line_breaks: None
+                }],
+                old: vec![Span {
+                    source: Source::Added,
+                    position: 0,
+                    length: 3,
+                    line_breaks: None
+                }]
+            }
+        );
+    }
+
     // # Inserts
 
     #[test]
     fn inserts_at_the_start() {
         let mut pt = PieceTable::from("678");
+
+        let change = pt.insert(0, "345");
+        assert_eq!(pt.to_string(), "345678");
+        assert_eq!(
+            change,
+            Change {
+                index: 0,
+                new: vec![Span {
+                    source: Source::Added,
+                    position: 0,
+                    length: 3,
+                    line_breaks: None
+                }],
+                old: vec![]
+            }
+        );
+
+        let change = pt.insert(0, "012");
+        assert_eq!(pt.to_string(), "012345678");
+        assert_eq!(
+            change,
+            Change {
+                index: 0,
+                new: vec![Span {
+                    source: Source::Added,
+                    position: 3,
+                    length: 3,
+                    line_breaks: None
+                }],
+                old: vec![]
+            }
+        );
+    }
+
+    #[test]
+    fn inserts_at_the_start_with_extend_spans() {
+        let mut pt = PieceTable::from("678");
+        pt.extend_spans = true;
 
         let change = pt.insert(0, "345");
         assert_eq!(pt.to_string(), "345678");
@@ -436,6 +554,49 @@ mod tests {
                     line_breaks: None
                 }],
                 old: vec![]
+            }
+        );
+    }
+
+    #[test]
+    fn inserts_at_the_end_with_extend_spans() {
+        let mut pt = PieceTable::from("012");
+        pt.extend_spans = true;
+
+        let change = pt.insert(3, "345");
+        assert_eq!(pt.to_string(), "012345");
+        assert_eq!(
+            change,
+            Change {
+                index: 1,
+                new: vec![Span {
+                    source: Source::Added,
+                    position: 0,
+                    length: 3,
+                    line_breaks: None
+                }],
+                old: vec![]
+            }
+        );
+
+        let change = pt.insert(6, "678");
+        assert_eq!(pt.to_string(), "012345678");
+        assert_eq!(
+            change,
+            Change {
+                index: 1,
+                new: vec![Span {
+                    source: Source::Added,
+                    position: 0,
+                    length: 6,
+                    line_breaks: None
+                }],
+                old: vec![Span {
+                    source: Source::Added,
+                    position: 0,
+                    length: 3,
+                    line_breaks: None
+                }]
             }
         );
     }

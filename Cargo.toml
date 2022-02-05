@@ -2,6 +2,5 @@
 
 members = [
   "cb-text",
-  "cb-ui",
   "cb-lang"
   ]

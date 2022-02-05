@@ -1,7 +1,0 @@
-[package]
-name = "cb-ui"
-version = "0.1.0"
-authors = ["Daniil Velichko <daniil@squaredu.cc>"]
-edition = "2018"
-
-[dependencies]
