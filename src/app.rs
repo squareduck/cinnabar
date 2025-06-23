@@ -2,8 +2,8 @@ use iced::{Subscription, Task, Theme, keyboard};
 
 use crate::{
     elements,
-    message::Message,
-    state::{Focus, InputMode, State, create_uid},
+    message::{KeymapNode, Message},
+    state::{State, create_uid},
 };
 
 pub type App = State;
@@ -14,41 +14,81 @@ impl App {
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
+        self.last_command = None;
+
+        let message = match message {
+            Message::KeyPress { key, modifiers } => {
+                match self.keymap.mapping.get(&(key, modifiers)) {
+                    Some(KeymapNode::Message(msg)) => Some(msg.clone()),
+                    Some(KeymapNode::Keymap(keymap)) => Some(Message::SwitchKeymap {
+                        keymap: keymap.clone(),
+                    }),
+                    _ => None,
+                }
+            }
+            _ => Some(message),
+        };
+
+        let message = match message {
+            Some(msg) => msg,
+            None => return Task::none(),
+        };
+
         match message {
-            Message::CreateWorkspace => self.screen.workspace_ids.push(create_uid()),
+            Message::Command(command) => {
+                self.last_command = Some(command.clone());
+
+                crate::commands::dispatch(self, command)
+            }
+            // TODO: Delete this after command refactor is complete
+            Message::CreateWorkspace => {
+                self.screen.workspace_ids.push(create_uid());
+                Task::none()
+            }
             Message::DestroyWorkspace => {
                 self.screen.workspace_ids.pop();
+                Task::none()
             }
             Message::ScrollDown => {
                 let max_row_count = self
                     .screen
                     .workspace_ids
                     .len()
-                    .div_ceil(0.max(self.screen.tiling_mode.max_columns));
+                    .div_ceil(0.max(self.screen.tiling.max_columns));
 
-                if max_row_count > self.screen.tiling_mode.max_expanded_rows
-                    && self.screen.tiling_mode.top_expanded_row_index
-                        < max_row_count - self.screen.tiling_mode.max_expanded_rows
+                if max_row_count > self.screen.tiling.max_expanded_rows
+                    && self.screen.tiling.top_expanded_row_index
+                        < max_row_count - self.screen.tiling.max_expanded_rows
                 {
-                    self.screen.tiling_mode.top_expanded_row_index += 1;
+                    self.screen.tiling.top_expanded_row_index += 1;
                 }
+                Task::none()
             }
             Message::ScrollUp => {
-                if self.screen.tiling_mode.top_expanded_row_index > 0 {
-                    self.screen.tiling_mode.top_expanded_row_index -= 1;
+                if self.screen.tiling.top_expanded_row_index > 0 {
+                    self.screen.tiling.top_expanded_row_index -= 1;
                 }
+                Task::none()
             }
-            Message::GrowColumns => self.screen.tiling_mode.max_columns += 1,
+            Message::GrowColumns => {
+                self.screen.tiling.max_columns += 1;
+                Task::none()
+            }
             Message::ShrinkColumns => {
-                if self.screen.tiling_mode.max_columns > 1 {
-                    self.screen.tiling_mode.max_columns -= 1;
+                if self.screen.tiling.max_columns > 1 {
+                    self.screen.tiling.max_columns -= 1;
                 }
+                Task::none()
             }
-            Message::GrowRows => self.screen.tiling_mode.max_expanded_rows += 1,
+            Message::GrowRows => {
+                self.screen.tiling.max_expanded_rows += 1;
+                Task::none()
+            }
             Message::ShrinkRows => {
-                if self.screen.tiling_mode.max_expanded_rows > 1 {
-                    self.screen.tiling_mode.max_expanded_rows -= 1;
+                if self.screen.tiling.max_expanded_rows > 1 {
+                    self.screen.tiling.max_expanded_rows -= 1;
                 }
+                Task::none()
             }
             Message::ToggleModal => {
                 if self.screen.transient_tool_id == None {
@@ -56,26 +96,26 @@ impl App {
                 } else {
                     self.screen.transient_tool_id = None;
                 }
+                Task::none()
             }
+            _ => Task::none(),
         }
-        Task::none()
     }
 
     pub fn view(&self) -> iced::Element<Message> {
-        elements::screen(&self.screen)
+        elements::screen(&self)
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
         match &self.screen.focus {
-            Focus::Tool { id, input_mode } if input_mode == &InputMode::Text => {
-                // Input mode, subscribe to key presses
-                keyboard::on_key_press(|key_code, modifiers| {
-                    // Handle key presses in input mode
-                    None
-                })
-            }
+            // Focus::Tool { id, input_mode } if input_mode == &InputMode::Text => {
+            //     // Input mode, subscribe to key presses
+            //     keyboard::on_key_press(|key_code, modifiers| {
+            //         // Handle key presses in input mode
+            //         None
+            //     })
+            // }
             _ => {
-                // Command mode or no context, subscribe to key presses
                 keyboard::on_key_press(|key_code, modifiers| {
                     // Handle key presses in command mode
                     match key_code {
@@ -106,7 +146,10 @@ impl App {
                         iced::keyboard::Key::Named(iced::keyboard::key::Named::Tab) => {
                             Some(Message::ToggleModal)
                         }
-                        _ => None,
+                        _ => Some(Message::KeyPress {
+                            key: key_code,
+                            modifiers,
+                        }),
                     }
                 })
             }

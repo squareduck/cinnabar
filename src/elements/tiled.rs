@@ -1,10 +1,17 @@
-use crate::{message::Message, state::TilingMode};
+use crate::{
+    message::Message,
+    state::{Tiling, Uid},
+};
 use iced::{
-    Length,
-    widget::{center, container, stack, text},
+    Border, Length, Theme,
+    widget::{
+        center,
+        container::{self, Style},
+        stack, text,
+    },
 };
 
-pub type TiledItem<'a> = (String, iced::Element<'a, Message>);
+pub type TiledItem<'a> = (Uid, String, iced::Element<'a, Message>);
 
 enum FoldingDirection {
     Up,
@@ -23,7 +30,7 @@ fn collapsed_rows<'a>(
         let mut row_element = iced::widget::Row::new();
 
         for _ in 0..columns_count {
-            if let Some((title, _item)) = items_iter.next() {
+            if let Some((_id, title, _item)) = items_iter.next() {
                 let is_folded_item = match folding_direction {
                     FoldingDirection::Up => row_index != rows_count - 1,
                     FoldingDirection::Down => row_index != 0,
@@ -57,10 +64,25 @@ fn collapsed_rows<'a>(
     column_element.into()
 }
 
+pub fn focused_box(theme: &Theme) -> Style {
+    let palette = theme.extended_palette();
+
+    Style {
+        background: Some(palette.background.weak.color.into()),
+        border: Border {
+            width: 1.0,
+            radius: 0.5.into(),
+            color: iced::Color::from_rgb(0.0, 0.5, 1.0),
+        },
+        ..Style::default()
+    }
+}
+
 pub fn expanded_rows<'a>(
     rows_count: usize,
     columns_count: usize,
     items_iter: &mut std::vec::IntoIter<TiledItem<'a>>,
+    focused_id: Option<Uid>,
 ) -> iced::Element<'a, Message> {
     let mut column_element = iced::widget::Column::new();
 
@@ -68,14 +90,18 @@ pub fn expanded_rows<'a>(
         let mut row_element = iced::widget::Row::new();
 
         for _ in 0..columns_count {
-            if let Some((_title, item)) = items_iter.next() {
-                row_element = row_element.push(
-                    iced::widget::container(item)
-                        .padding(10)
-                        .height(Length::Fill)
-                        .width(Length::Fill)
-                        .style(container::bordered_box),
-                );
+            if let Some((id, _title, item)) = items_iter.next() {
+                let mut item = iced::widget::container(item)
+                    .padding(10)
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+                    .style(container::bordered_box);
+
+                if focused_id == Some(id) {
+                    item = item.style(focused_box);
+                }
+
+                row_element = row_element.push(item);
             }
         }
 
@@ -86,9 +112,10 @@ pub fn expanded_rows<'a>(
 }
 
 pub fn tiled<'a>(
-    tiling_mode: &'a TilingMode,
-    items: Vec<(String, iced::Element<'a, Message>)>,
+    tiling_mode: &'a Tiling,
+    items: Vec<(Uid, String, iced::Element<'a, Message>)>,
     modal_item: Option<iced::Element<'a, Message>>,
+    focused_id: Option<Uid>,
 ) -> iced::Element<'a, Message> {
     let max_row_count = items.len().div_ceil(tiling_mode.max_columns);
 
@@ -123,6 +150,7 @@ pub fn tiled<'a>(
             expanded_rows_count,
             tiling_mode.max_columns,
             &mut items_iter,
+            focused_id,
         );
 
         column = column.push(sub_column);
@@ -141,12 +169,14 @@ pub fn tiled<'a>(
 
     if let Some(modal_item) = modal_item {
         stack![
-            container(column).width(Length::Fill).height(Length::Fill),
-            center(container(modal_item))
+            iced::widget::container(column)
+                .width(Length::Fill)
+                .height(Length::Fill),
+            center(iced::widget::container(modal_item))
         ]
         .into()
     } else {
-        container(column)
+        iced::widget::container(column)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
