@@ -1,5 +1,5 @@
 mod app;
-mod commands;
+mod config;
 mod elements;
 mod message;
 mod state;
@@ -7,6 +7,7 @@ mod state;
 use app::App;
 use iced::Font;
 
+// TODO: Finish with big restructuring refactor
 // TODO: Implement tiling controls with new command system
 // TODO: Cleanup view code
 

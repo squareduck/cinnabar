@@ -1,10 +1,6 @@
+use crate::state::State;
+use crate::{message::Message, state::keymaps::KeymapNode};
 use iced::{Subscription, Task, Theme, keyboard};
-
-use crate::{
-    elements,
-    message::{KeymapNode, Message},
-    state::{State, create_uid},
-};
 
 pub type App = State;
 
@@ -14,16 +10,22 @@ impl App {
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
-        self.last_command = None;
+        use crate::state::create_uid;
 
         let message = match message {
             Message::KeyPress { key, modifiers } => {
-                match self.keymap.mapping.get(&(key, modifiers)) {
-                    Some(KeymapNode::Message(msg)) => Some(msg.clone()),
-                    Some(KeymapNode::Keymap(keymap)) => Some(Message::SwitchKeymap {
-                        keymap: keymap.clone(),
-                    }),
-                    _ => None,
+                if let Some(keymap) = self.keymap_for_mode(&self.mode) {
+                    match keymap.mapping.get(&(key, modifiers)) {
+                        Some(KeymapNode::Command(handle)) => Some(Message::Command(handle.clone())),
+                        _ => None,
+                    }
+                } else if let Some(keymap) = self.keymaps.get("global") {
+                    match keymap.mapping.get(&(key, modifiers)) {
+                        Some(KeymapNode::Command(handle)) => Some(Message::Command(handle.clone())),
+                        _ => None,
+                    }
+                } else {
+                    None
                 }
             }
             _ => Some(message),
@@ -36,17 +38,12 @@ impl App {
 
         match message {
             Message::Command(command) => {
-                self.last_command = Some(command.clone());
+                if let Some(command) = self.commands.get(&command) {
+                    let _ = (command.command)(self);
+                } else {
+                    eprintln!("Command not found: {:?}", command);
+                }
 
-                crate::commands::dispatch(self, command)
-            }
-            // TODO: Delete this after command refactor is complete
-            Message::CreateWorkspace => {
-                self.screen.workspace_ids.push(create_uid());
-                Task::none()
-            }
-            Message::DestroyWorkspace => {
-                self.screen.workspace_ids.pop();
                 Task::none()
             }
             Message::ScrollDown => {
@@ -103,11 +100,13 @@ impl App {
     }
 
     pub fn view(&self) -> iced::Element<Message> {
-        elements::screen(&self)
+        use crate::elements::screen;
+
+        screen(&self)
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        match &self.screen.focus {
+        match &self.screen.mode {
             // Focus::Tool { id, input_mode } if input_mode == &InputMode::Text => {
             //     // Input mode, subscribe to key presses
             //     keyboard::on_key_press(|key_code, modifiers| {

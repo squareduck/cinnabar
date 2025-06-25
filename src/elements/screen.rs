@@ -1,14 +1,14 @@
-use crate::{
-    elements::tiled,
-    message::Message,
-    state::{Focus, Screen, State, Workspace},
-};
-use iced::{
-    Element, Length,
-    widget::{column, container, row, text},
-};
+use iced::Element;
+
+use crate::message::Message;
+use crate::state::State;
 
 pub fn screen(state: &State) -> Element<Message> {
+    use crate::elements::tiled::tiled;
+    use crate::state::mode::Mode;
+    use iced::Length;
+    use iced::widget::{column, container, row, text};
+
     let screen = &state.screen;
     column!(
         tiled(
@@ -35,12 +35,12 @@ pub fn screen(state: &State) -> Element<Message> {
                     .style(container::bordered_box)
                     .into()
             }),
-            match state.focus {
-                Focus::Workspace { id, .. } => id,
+            match state.mode {
+                Mode::Workspace { id, .. } => id,
                 _ => None,
             },
         ),
-        row!(text(format!("Focus: {:?}", state.focus))),
+        row!(text(format!(" {:?}", state.mode))),
     )
     .into()
 }
