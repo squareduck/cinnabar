@@ -33,8 +33,8 @@ impl Default for Workspace {
 pub trait WorkspaceActions {
     fn create_workspace(&mut self) -> Uid;
     fn delete_workspace(&mut self) -> Result<()>;
-    fn next_workspace(&mut self) -> ();
-    fn previous_workspace(&mut self) -> ();
+    fn next_workspace(&mut self);
+    fn previous_workspace(&mut self);
 }
 
 impl WorkspaceActions for State {
@@ -77,15 +77,13 @@ impl WorkspaceActions for State {
         Ok(())
     }
 
-    fn next_workspace(&mut self) -> () {
+    fn next_workspace(&mut self) {
         let next_workspace_id = if let Some(current_workspace_id) = self.current_workspace_id() {
             self.screen
                 .workspace_ids
                 .iter()
                 .cycle()
-                .skip_while(|workspace_id| **workspace_id != current_workspace_id)
-                .skip(1)
-                .next()
+                .skip_while(|workspace_id| **workspace_id != current_workspace_id).nth(1)
                 .copied()
         } else {
             self.screen.workspace_ids.first().copied()
@@ -94,16 +92,14 @@ impl WorkspaceActions for State {
         self.update_workspace_mode(next_workspace_id);
     }
 
-    fn previous_workspace(&mut self) -> () {
+    fn previous_workspace(&mut self) {
         let next_workspace_id = if let Some(current_workspace_id) = self.current_workspace_id() {
             self.screen
                 .workspace_ids
                 .iter()
                 .rev()
                 .cycle()
-                .skip_while(|workspace_id| **workspace_id != current_workspace_id)
-                .skip(1)
-                .next()
+                .skip_while(|workspace_id| **workspace_id != current_workspace_id).nth(1)
                 .copied()
         } else {
             self.screen.workspace_ids.last().copied()

@@ -1,5 +1,4 @@
 use iced::Element;
-use iced::window::Mode;
 
 use crate::message::Message;
 use crate::state::State;
@@ -21,8 +20,8 @@ pub fn screen(state: &State) -> Element<Message> {
                 .map(|id| {
                     (
                         *id,
-                        format!("- {}", id.to_string()),
-                        container(text(format!("worspace {}", id.to_string())))
+                        format!("- {}", id),
+                        container(text(format!("worspace {}", id)))
                             .padding(10)
                             .height(Length::Fill)
                             .width(Length::Fill)
@@ -32,13 +31,16 @@ pub fn screen(state: &State) -> Element<Message> {
                 })
                 .collect(),
             screen.transient_tool_id.map(|id| {
-                container(text(format!("transient tool {}", id.to_string())))
+                container(text(format!("transient tool {}", id)))
                     .padding(10)
                     .style(container::bordered_box)
                     .into()
             }),
             match state.mode {
                 Mode::Workspace { id, .. } => id,
+                Mode::View {
+                    mode: ViewMode::Workspace { id },
+                } => id,
                 _ => None,
             },
         ),

@@ -29,11 +29,7 @@ impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         let message = match message {
             Message::KeyPress { key, modifiers } => {
-                if let Some(handle) = resolve_keybind(&self, (key, modifiers)) {
-                    Some(Message::Command(handle))
-                } else {
-                    None
-                }
+                resolve_keybind(self, (key, modifiers)).map(Message::Command)
             }
             _ => Some(message),
         };
@@ -74,7 +70,7 @@ impl App {
     pub fn view(&self) -> iced::Element<Message> {
         use crate::elements::screen;
 
-        screen(&self)
+        screen(self)
     }
 
     pub fn subscription(&self) -> Subscription<Message> {

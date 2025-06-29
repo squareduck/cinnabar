@@ -78,7 +78,7 @@ pub trait CommandActions {
 
 impl CommandActions for State {
     fn resolve_command(&self, handle: &str) -> Option<Command> {
-        self.commands.get_command(handle.into()).clone()
+        self.commands.get_command(handle).clone()
     }
 
     fn insert_command(&mut self, command: Command) {
@@ -123,6 +123,16 @@ pub fn global_commands() -> CommandMap {
         |state: &mut State| {
             let workspace_id = state.current_workspace_id();
             state.push_view_workspace_mode(workspace_id);
+            Ok(Task::none())
+        },
+    );
+
+    commands.insert_command(
+        "pop-mode",
+        "Pop Mode",
+        "Pop current mode from mode stack",
+        |state: &mut State| {
+            state.pop_mode();
             Ok(Task::none())
         },
     );

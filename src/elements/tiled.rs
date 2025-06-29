@@ -1,3 +1,5 @@
+use iced::widget::text;
+
 use crate::{
     message::Message,
     state::{Uid, tiling::Tiling},
@@ -112,7 +114,7 @@ pub fn expanded_rows<'a>(
 }
 
 pub fn tiled<'a>(
-    tiling_mode: &'a Tiling,
+    tiling: &'a Tiling,
     items: Vec<(Uid, String, iced::Element<'a, Message>)>,
     modal_item: Option<iced::Element<'a, Message>>,
     focused_id: Option<Uid>,
@@ -120,54 +122,70 @@ pub fn tiled<'a>(
     use iced::Length;
     use iced::widget::{center, stack};
 
-    let max_row_count = items.len().div_ceil(tiling_mode.max_columns);
-
-    let expanded_rows_count = tiling_mode.max_expanded_rows;
-    let top_collapsed_rows_count = tiling_mode.top_expanded_row_index;
-    let bottom_collapsed_rows_count =
-        if (top_collapsed_rows_count + expanded_rows_count) <= max_row_count {
-            max_row_count - (top_collapsed_rows_count + expanded_rows_count)
-        } else {
-            0
-        };
-
+    let items_len = items.len();
     let mut items_iter = items.into_iter();
 
     let mut column = iced::widget::Column::new()
         .height(Length::Fill)
         .width(Length::Fill);
 
-    if top_collapsed_rows_count > 0 {
-        let sub_column = collapsed_rows(
-            top_collapsed_rows_count,
-            tiling_mode.max_columns,
-            &mut items_iter,
-            FoldingDirection::Up,
-        );
+    if tiling.fullscreen {
+        let item_container =
+            if let Some((_id, _title, element)) = items_iter.find(|i| Some(i.0) == focused_id) {
+                iced::widget::container(element)
+                    .padding(10)
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+                    .style(focused_box)
+            } else {
+                iced::widget::container(text("No selection"))
+                    .padding(10)
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+                    .style(focused_box)
+            };
 
-        column = column.push(sub_column);
-    }
+        column = column.push(item_container);
+    } else {
+        let max_row_count = items_len.div_ceil(tiling.max_columns);
 
-    if expanded_rows_count > 0 {
-        let sub_column = expanded_rows(
-            expanded_rows_count,
-            tiling_mode.max_columns,
-            &mut items_iter,
-            focused_id,
-        );
+        let expanded_rows_count = tiling.max_expanded_rows;
+        let top_collapsed_rows_count = tiling.top_expanded_row_index;
+        let bottom_collapsed_rows_count =
+            max_row_count.saturating_sub(top_collapsed_rows_count + expanded_rows_count);
 
-        column = column.push(sub_column);
-    }
+        if top_collapsed_rows_count > 0 {
+            let sub_column = collapsed_rows(
+                top_collapsed_rows_count,
+                tiling.max_columns,
+                &mut items_iter,
+                FoldingDirection::Up,
+            );
 
-    if bottom_collapsed_rows_count > 0 {
-        let sub_column = collapsed_rows(
-            bottom_collapsed_rows_count,
-            tiling_mode.max_columns,
-            &mut items_iter,
-            FoldingDirection::Down,
-        );
+            column = column.push(sub_column);
+        }
 
-        column = column.push(sub_column);
+        if expanded_rows_count > 0 {
+            let sub_column = expanded_rows(
+                expanded_rows_count,
+                tiling.max_columns,
+                &mut items_iter,
+                focused_id,
+            );
+
+            column = column.push(sub_column);
+        }
+
+        if bottom_collapsed_rows_count > 0 {
+            let sub_column = collapsed_rows(
+                bottom_collapsed_rows_count,
+                tiling.max_columns,
+                &mut items_iter,
+                FoldingDirection::Down,
+            );
+
+            column = column.push(sub_column);
+        }
     }
 
     if let Some(modal_item) = modal_item {

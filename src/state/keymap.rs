@@ -40,10 +40,7 @@ pub fn keymap_for_mode<'a>(state: &'a State, mode: &'a Mode) -> Option<&'a Keyma
 
 pub fn resolve_keybind(state: &State, (key, modifiers): (Key, Modifiers)) -> Option<String> {
     if let Some(keymap) = keymap_for_mode(state, &state.mode) {
-        match keymap.mapping.get(&(key.clone(), modifiers)) {
-            Some(KeymapNode::Command(handle)) => return Some(handle.clone()),
-            _ => {}
-        }
+        if let Some(KeymapNode::Command(handle)) = keymap.mapping.get(&(key.clone(), modifiers)) { return Some(handle.clone()) }
     }
 
     if let Some(keymap) = state.keymaps.get("global") {

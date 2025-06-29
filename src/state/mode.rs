@@ -61,10 +61,12 @@ impl ModeActions for State {
     }
 
     fn current_workspace_id(&mut self) -> Option<Uid> {
-        if let Mode::Workspace { id } = self.mode {
-            id
-        } else {
-            None
+        match self.mode {
+            Mode::Workspace { id } => id,
+            Mode::View {
+                mode: ViewMode::Workspace { id },
+            } => id,
+            _ => None,
         }
     }
 

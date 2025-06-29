@@ -21,6 +21,7 @@ pub trait ViewActions {
     fn view_shrink_columns(&mut self) -> Result<()>;
     fn view_scroll_down(&mut self) -> Result<()>;
     fn view_scroll_up(&mut self) -> Result<()>;
+    fn view_toggle_fullscreen(&mut self) -> Result<()>;
 }
 
 impl ViewActions for State
@@ -109,6 +110,17 @@ where
 
         Ok(())
     }
+
+    fn view_toggle_fullscreen(&mut self) -> Result<()> {
+        match self.current_view_mode() {
+            Some(ViewMode::Workspace { .. }) => {
+                self.screen.tiling.fullscreen = !self.screen.tiling.fullscreen;
+            }
+            _ => return Err(ViewError::NoTarget.into()),
+        }
+
+        Ok(())
+    }
 }
 
 pub fn view_commands() -> CommandMap {
@@ -170,6 +182,16 @@ pub fn view_commands() -> CommandMap {
         "Scroll up expanded rows in current view",
         |state: &mut State| {
             state.view_scroll_up()?;
+            Ok(Task::none())
+        },
+    );
+
+    commands.insert_command(
+        "view-toggle-fullscreen",
+        "Toggle Fullscreen",
+        "Toggle fullscreen for currently selected item",
+        |state: &mut State| {
+            state.view_toggle_fullscreen()?;
             Ok(Task::none())
         },
     );

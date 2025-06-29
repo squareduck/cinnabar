@@ -3,6 +3,7 @@
 [keymaps.global]
 workspace-mode = "cmd-w"
 view-mode = "cmd-v"
+pop-mode = "esc"
 
 [keymaps.workspace-mode]
 workspace-create = "c"
@@ -17,3 +18,4 @@ view-expand-columns = "v"
 view-shrink-columns = "shift-v"
 view-scroll-down = "n"
 view-scroll-up = "shift-n"
+view-toggle-fullscreen = "."

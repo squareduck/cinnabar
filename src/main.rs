@@ -12,5 +12,5 @@ fn main() -> iced::Result {
         .theme(App::theme)
         .subscription(App::subscription)
         .default_font(Font::with_name("Iosevka Nerd Font"))
-        .run_with(|| App::new())
+        .run_with(App::new)
 }
