@@ -1,7 +1,9 @@
 use iced::Element;
+use iced::window::Mode;
 
 use crate::message::Message;
 use crate::state::State;
+use crate::state::mode::ViewMode;
 
 pub fn screen(state: &State) -> Element<Message> {
     use crate::elements::tiled::tiled;
@@ -40,7 +42,22 @@ pub fn screen(state: &State) -> Element<Message> {
                 _ => None,
             },
         ),
-        row!(text(format!(" {:?}", state.mode))),
+        row!(text(format!(
+            " MODE: {:?} CMD: {}",
+            match state.mode {
+                Mode::None => "-".to_string(),
+                Mode::Workspace { id } => format!("WSP {:?}", id),
+                Mode::View {
+                    mode: ViewMode::Workspace { .. },
+                } => "WSP VIEW".to_string(),
+                _ => "UNKNOWN".to_string(),
+            },
+            if let Some(command) = &state.last_command {
+                command.handle()
+            } else {
+                "-"
+            }
+        ))),
     )
     .into()
 }

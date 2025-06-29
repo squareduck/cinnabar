@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf};
 use iced::keyboard::{Key, Modifiers};
 use toml::Value;
 
-use crate::state::keymaps::{Keymap, KeymapNode, Keymaps};
+use crate::state::keymap::{Keymap, KeymapNode, Keymaps};
 
 pub struct Config {
     pub keymaps: Keymaps,

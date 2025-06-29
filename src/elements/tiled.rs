@@ -17,7 +17,7 @@ fn collapsed_rows<'a>(
     folding_direction: FoldingDirection,
 ) -> iced::Element<'a, Message> {
     use iced::Length;
-    use iced::widget::{center, container, stack, text};
+    use iced::widget::{container, text};
 
     let mut column_element = iced::widget::Column::new();
 
@@ -82,7 +82,7 @@ pub fn expanded_rows<'a>(
     focused_id: Option<Uid>,
 ) -> iced::Element<'a, Message> {
     use iced::Length;
-    use iced::widget::{Column, Row, center, container, stack};
+    use iced::widget::container;
 
     let mut column_element = iced::widget::Column::new();
 

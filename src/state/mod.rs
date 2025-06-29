@@ -1,16 +1,19 @@
-pub mod commands;
-pub mod keymaps;
+pub mod command;
+pub mod keymap;
 pub mod mode;
 pub mod screen;
 pub mod tiling;
+pub mod view;
 pub mod workspace;
+
+use anyhow::Error;
 
 use self::mode::Mode;
 use self::screen::Screen;
 use self::workspace::Workspace;
 
-use crate::state::commands::{Command, CommandMap};
-use crate::state::keymaps::Keymaps;
+use crate::state::command::{Command, CommandActions, CommandMap};
+use crate::state::keymap::Keymaps;
 
 use std::collections::HashMap;
 
@@ -27,45 +30,33 @@ pub struct State {
     pub mode_history: Vec<Mode>,
     pub keymaps: Keymaps,
     pub commands: CommandMap,
+    pub last_command: Option<Command>,
+    pub errors: Vec<Error>,
 }
 
 impl State {
-    pub fn insert_command(&mut self, command: Command) {
-        self.commands.insert(command.handle.clone(), command);
-    }
-
-    pub fn merge_commands(&mut self, commands: CommandMap) {
-        for command in commands.into_values() {
-            self.insert_command(command);
-        }
-    }
-
-    pub fn keymap_for_mode(&self, mode: &Mode) -> Option<&keymaps::Keymap> {
-        match mode {
-            Mode::Workspace { .. } => self.keymaps.get("workspace-mode"),
-            Mode::View { .. } => self.keymaps.get("view-mode"),
-            _ => None,
-        }
+    pub fn push_error(&mut self, error: Error) {
+        eprintln!("Error: {:?}", error);
+        self.errors.push(error)
     }
 }
 
 impl Default for State {
-    fn default() -> Self {
+    fn default() -> Self
+    where
+        Self: CommandActions,
+    {
         let config = crate::config::Config::from_toml("./config.toml");
 
-        let mut state = Self {
+        Self {
             screen: Screen::default(),
             workspaces: HashMap::new(),
             mode: Mode::Workspace { id: None },
             mode_history: Vec::new(),
-            commands: HashMap::new(),
+            commands: CommandMap::new(),
             keymaps: config.keymaps,
-        };
-
-        state.merge_commands(crate::state::commands::workspace::commands());
-
-        eprintln!("Available commands: {:?}", state.commands.values());
-
-        state
+            last_command: None,
+            errors: Vec::new(),
+        }
     }
 }

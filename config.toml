@@ -6,14 +6,14 @@ view-mode = "cmd-v"
 
 [keymaps.workspace-mode]
 workspace-create = "c"
-workspace-cut = "shift-c"
+workspace-delete = "shift-c"
 workspace-next = "n"
-workspace-previous = "p"
+workspace-previous = "shift-n"
 
 [keymaps.view-mode]
 view-expand-rows = "e"
 view-shrink-rows = "shift-e"
-view-expand-columns = "u"
-view-shrink-columns = "d"
+view-expand-columns = "v"
+view-shrink-columns = "shift-v"
 view-scroll-down = "n"
-view-scroll-up = "p"
+view-scroll-up = "shift-n"
